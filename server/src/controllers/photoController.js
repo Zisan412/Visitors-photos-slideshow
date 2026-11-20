@@ -1,15 +1,20 @@
-const fs = require('fs/promises');
 const path = require('path');
-const crypto = require('crypto');
 const mongoose = require('mongoose');
 const sharp = require('sharp');
 const Folder = require('../models/Folder');
 const { publish } = require('../services/liveUpdates');
+const {
+  UPLOAD_DIR,
+  deleteImageKitFile,
+  deletePhotoAsset,
+  getImageKitImage,
+  isImageKitConfigured,
+  uploadImage,
+} = require('../services/photoStorage');
 const { serializeFolder } = require('../utils/serialize');
 const httpError = require('../utils/httpError');
 const { publicApiUrl } = require('../config/env');
 
-const UPLOAD_DIR = path.resolve(__dirname, '../../uploads');
 const MAX_PHOTOS_PER_FOLDER = 100;
 const MAX_IMAGE_PIXELS = 40_000_000;
 
@@ -20,31 +25,33 @@ async function addPhotos(req, res) {
   if (folder.photos.length + req.files.length > MAX_PHOTOS_PER_FOLDER) {
     throw httpError(400, `A folder can contain at most ${MAX_PHOTOS_PER_FOLDER} photos.`);
   }
+  if (!isImageKitConfigured()) throw httpError(503, 'Image storage is not configured.');
 
-  await fs.mkdir(UPLOAD_DIR, { recursive: true });
-  const createdFiles = [];
+  const uploadedFileIds = [];
   try {
     for (const file of req.files) {
       const photoId = new mongoose.Types.ObjectId();
-      const storageKey = `${crypto.randomUUID()}.jpg`;
-      const outputPath = path.join(UPLOAD_DIR, storageKey);
-      createdFiles.push(outputPath);
+      const fileName = `${new mongoose.Types.ObjectId()}.jpg`;
       let metadata;
+      let image;
       try {
-        metadata = await sharp(file.buffer, { limitInputPixels: MAX_IMAGE_PIXELS, failOn: 'error' })
+        ({ data: image, info: metadata } = await sharp(file.buffer, { limitInputPixels: MAX_IMAGE_PIXELS, failOn: 'error' })
           .rotate()
           .jpeg({ quality: 88, mozjpeg: true })
-          .toFile(outputPath);
+          .toBuffer({ resolveWithObject: true }));
       } catch {
         throw httpError(400, `${file.originalname} is not a valid or supported image.`);
       }
 
+      const uploaded = await uploadImage(image, fileName, `/visitor-photos/${req.user._id}/${folder._id}`);
+      uploadedFileIds.push(uploaded.fileId);
       folder.photos.push({
         _id: photoId,
         originalName: path.basename(file.originalname).slice(0, 255),
-        storageKey,
+        storageKey: null,
         imageUrl: `${publicApiUrl}/api/photos/${photoId}`,
-        imageKitFileId: null,
+        imageKitFileId: uploaded.fileId,
+        imageKitUrl: uploaded.url,
         mimeType: 'image/jpeg',
         size: metadata.size,
         width: metadata.width,
@@ -53,7 +60,12 @@ async function addPhotos(req, res) {
     }
     await folder.save();
   } catch (error) {
-    await Promise.allSettled(createdFiles.map(filePath => fs.unlink(filePath)));
+    const cleanup = await Promise.allSettled(uploadedFileIds.map(deleteImageKitFile));
+    for (const result of cleanup) {
+      if (result.status === 'rejected') {
+        console.error('ImageKit upload cleanup failed:', result.reason.name || 'Error', result.reason.code || 'no-code');
+      }
+    }
     throw error;
   }
 
@@ -70,12 +82,7 @@ async function deletePhoto(req, res) {
   if (!folder) throw httpError(404, 'Photo not found.');
 
   const photo = folder.photos.id(req.params.photoId);
-  const filePath = path.join(UPLOAD_DIR, photo.storageKey);
-  try {
-    await fs.unlink(filePath);
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-  }
+  await deletePhotoAsset(photo);
   folder.photos.pull({ _id: photo._id });
   await folder.save();
 
@@ -92,6 +99,12 @@ async function servePhoto(req, res) {
 
   const photo = folder.photos.id(req.params.photoId);
   res.set('Cache-Control', 'private, no-store');
+  if (photo.imageKitFileId) {
+    if (!photo.imageKitUrl) throw new Error('ImageKit URL is missing for a stored image.');
+    res.type(photo.mimeType);
+    return res.send(await getImageKitImage(photo.imageKitUrl));
+  }
+  if (!photo.storageKey) throw new Error('Photo storage key is missing.');
   return res.sendFile(path.basename(photo.storageKey), { root: UPLOAD_DIR });
 }
 

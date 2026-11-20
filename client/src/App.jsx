@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import AppShell from './components/AppShell.jsx';
 import { AppDataProvider, useAppData } from './hooks/useAppData.jsx';
-import { LoginPage, SignupPage } from './pages/AuthPages.jsx';
+import { ForgotPasswordPage, LoginPage, SignupPage } from './pages/AuthPages.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import DisplayPage from './pages/DisplayPage.jsx';
 import FolderDetailsPage from './pages/FolderDetailsPage.jsx';
@@ -10,7 +10,9 @@ import SlideshowPage from './pages/SlideshowPage.jsx';
 
 function ProtectedLayout() {
   const { user, authLoading, foldersLoaded } = useAppData();
-  if (authLoading || (user && !foldersLoaded)) return <div className="route-loading" role="status">Loading your library…</div>;
+  if (authLoading || (user && !foldersLoaded)) {
+    return <div className="route-loading" role="status" aria-live="polite"><span className="loading-spinner" />Loading your library…</div>;
+  }
   return user ? <AppShell /> : <Navigate to="/login" replace />;
 }
 
@@ -25,6 +27,7 @@ function AppRoutes() {
       <Route path="/" element={<LoginRedirect />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route element={<ProtectedLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/folders/new" element={<FolderEditorPage />} />

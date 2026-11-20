@@ -3,7 +3,6 @@ function serializePhoto(photo) {
     id: photo._id.toString(),
     name: photo.originalName,
     imageUrl: photo.imageUrl,
-    fileId: photo.imageKitFileId || null,
     mimeType: photo.mimeType,
     size: photo.size,
     width: photo.width,

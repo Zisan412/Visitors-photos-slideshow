@@ -22,9 +22,9 @@ export function Field({ label, id, hint, ...props }) {
   );
 }
 
-export function Brand({ light = false }) {
+export function Brand() {
   return (
-    <Link className={`brand${light ? ' brand--light' : ''}`} to="/dashboard" aria-label="Frame home">
+    <Link className="brand" to="/dashboard" aria-label="Frame home">
       <span className="brand__mark" aria-hidden="true"><span /></span>
       <span>frame<span className="brand__dot">.</span></span>
     </Link>

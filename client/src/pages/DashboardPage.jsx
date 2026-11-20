@@ -66,13 +66,13 @@ export default function DashboardPage() {
           <Button as={Link} to="/folders/new"><ImagePlus size={16} /> Create new folder <ArrowUpRight size={15} /></Button>
         </div>
         <div className="library-toolbar">
-          <label className="search-field"><Search size={16} /><input id="folder-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search folders…" /><kbd>⌘ K</kbd></label>
-          <button className="sort-button" onClick={() => setSort(value => value === 'newest' ? 'oldest' : 'newest')}>Date created <ArrowDown size={15} className={sort === 'oldest' ? 'sort-reverse' : ''} /></button>
+          <label className="search-field"><Search size={16} /><input id="folder-search" aria-label="Search folders" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search folders…" /><kbd>Ctrl / ⌘ K</kbd></label>
+          <button className="sort-button" aria-label={sort === 'newest' ? 'Sort oldest first' : 'Sort newest first'} aria-pressed={sort === 'oldest'} onClick={() => setSort(value => value === 'newest' ? 'oldest' : 'newest')}>Date created <ArrowDown size={15} className={sort === 'oldest' ? 'sort-reverse' : ''} /></button>
         </div>
         {foldersLoading || retrying ? (
-          <div className="empty-state" role="status"><span className="loading-spinner" /><h3>Loading your folders…</h3></div>
+          <div className="empty-state" role="status" aria-live="polite"><span className="loading-spinner" /><h3>Loading your folders…</h3></div>
         ) : foldersError ? (
-          <div className="empty-state"><h3>We couldn’t load your folders</h3><p>{foldersError}</p><Button variant="secondary" onClick={retryLoading}>Try again</Button></div>
+          <div className="empty-state" role="alert"><h3>We couldn’t load your folders</h3><p>{foldersError}</p><Button variant="secondary" onClick={retryLoading} disabled={retrying}>{retrying ? 'Trying again…' : 'Try again'}</Button></div>
         ) : visibleFolders.length > 0 ? (
           <div className="folder-grid">{visibleFolders.map(folder => <FolderCard key={folder.id} folder={folder} onDelete={deleteFolder} />)}</div>
         ) : (

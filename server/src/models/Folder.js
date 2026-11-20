@@ -3,9 +3,10 @@ const mongoose = require('mongoose');
 const photoSchema = new mongoose.Schema(
   {
     originalName: { type: String, required: true, maxlength: 255 },
-    storageKey: { type: String, required: true },
+    storageKey: { type: String, default: null },
     imageUrl: { type: String, required: true },
     imageKitFileId: { type: String, default: null },
+    imageKitUrl: { type: String, default: null },
     mimeType: { type: String, required: true },
     size: { type: Number, required: true },
     width: { type: Number, required: true },

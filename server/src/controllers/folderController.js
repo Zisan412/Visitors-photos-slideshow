@@ -1,11 +1,8 @@
-const fs = require('fs/promises');
-const path = require('path');
 const Folder = require('../models/Folder');
 const { publish } = require('../services/liveUpdates');
+const { deletePhotoAsset } = require('../services/photoStorage');
 const { serializeFolder } = require('../utils/serialize');
 const httpError = require('../utils/httpError');
-
-const UPLOAD_DIR = path.resolve(__dirname, '../../uploads');
 
 function validateFolderInput(body, partial = false) {
   body = body && typeof body === 'object' && !Array.isArray(body) ? body : {};
@@ -58,10 +55,10 @@ async function deleteFolder(req, res) {
   const folder = await Folder.findOneAndDelete({ _id: req.params.folderId, owner: req.user._id });
   if (!folder) throw httpError(404, 'Folder not found.');
 
-  const removals = await Promise.allSettled(folder.photos.map(photo => fs.unlink(path.join(UPLOAD_DIR, photo.storageKey))));
+  const removals = await Promise.allSettled(folder.photos.map(deletePhotoAsset));
   for (const result of removals) {
-    if (result.status === 'rejected' && result.reason.code !== 'ENOENT') {
-      console.error('Local photo cleanup failed:', result.reason.code || 'unknown');
+    if (result.status === 'rejected') {
+      console.error('Photo storage cleanup failed:', result.reason.name || 'Error', result.reason.code || 'no-code');
     }
   }
   publish(req.user._id, 'folder-deleted', folder._id);

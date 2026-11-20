@@ -1,4 +1,4 @@
-import { ChevronDown, LogOut, MonitorPlay, Plus, Search } from 'lucide-react';
+import { ChevronDown, LogOut, MonitorPlay } from 'lucide-react';
 import { useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
@@ -36,14 +36,6 @@ export default function AppShell() {
             <Link className={display ? 'nav-link nav-link--active' : 'nav-link'} to="/display"><MonitorPlay size={16} /> Display</Link>
           </nav>
           <div className="topbar__actions">
-            {dashboard && (
-              <Button as={Link} to="/folders/new" className="topbar__create"><Plus size={16} /> New folder</Button>
-            )}
-            {dashboard && (
-              <button className="icon-button topbar__search" aria-label="Search folders" onClick={() => window.dispatchEvent(new Event('frame-search'))}>
-                <Search size={18} />
-              </button>
-            )}
             <div className="profile">
               <button className="profile__button" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen}>
                 <span className="avatar">{(user?.name || 'Guest').slice(0, 1).toUpperCase()}</span>

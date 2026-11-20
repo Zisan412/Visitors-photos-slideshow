@@ -34,6 +34,12 @@ module.exports = {
   cookieSameSite: process.env.COOKIE_SAME_SITE || 'lax',
   cookieSecure: process.env.NODE_ENV === 'production',
   envFilePath: envPath,
+  imageKitPrivateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+  imageKitUrlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+  imageKitConfigured: Boolean(
+    process.env.IMAGEKIT_PRIVATE_KEY
+      && process.env.IMAGEKIT_URL_ENDPOINT,
+  ),
   jwtSecret: process.env.JWT_SECRET,
   mongoUri: process.env.MONGO_URI,
   nodeEnv: process.env.NODE_ENV || 'development',
